@@ -6,24 +6,27 @@ import ReviewTable from './components/ReviewTable.jsx'
 export default function App() {
   const [status, setStatus] = useState('loading') // loading | error | ready
   const [reviews, setReviews] = useState([])
+  const [errorMessage, setErrorMessage] = useState(null)
   const [repositoryFilter, setRepositoryFilter] = useState('all')
   const [ratingFilter, setRatingFilter] = useState('all')
+  const [sortKey, setSortKey] = useState(null)
+  const [sortDir, setSortDir] = useState('asc')
 
-  useEffect(() => {
-    let active = true
+  function load() {
     setStatus('loading')
     fetchReviews()
       .then((data) => {
-        if (!active) return
         setReviews(data)
         setStatus('ready')
       })
-      .catch(() => {
-        if (active) setStatus('error')
+      .catch((err) => {
+        setErrorMessage(err.message || 'Request failed')
+        setStatus('error')
       })
-    return () => {
-      active = false
-    }
+  }
+
+  useEffect(() => {
+    load()
   }, [])
 
   const repositories = useMemo(
@@ -41,59 +44,98 @@ export default function App() {
     [reviews, repositoryFilter, ratingFilter],
   )
 
-  if (status === 'loading') {
-    return <p data-testid="loading-state">Loading reviews…</p>
+  // Sorted view of the filtered records.
+  const sorted = useMemo(() => {
+    if (!sortKey) return filtered
+    const copy = [...filtered]
+    copy.sort((a, b) => {
+      const av = a[sortKey]
+      const bv = b[sortKey]
+      if (av < bv) return sortDir === 'asc' ? -1 : 1
+      if (av > bv) return sortDir === 'asc' ? 1 : -1
+      return 0
+    })
+    return copy
+  }, [sortKey, sortDir])
+
+  const displayed = sortKey ? sorted : filtered
+
+  function handleSort(key) {
+    if (key === sortKey) {
+      setSortDir((d) => (d === 'asc' ? 'desc' : 'asc'))
+    } else {
+      setSortKey(key)
+      setSortDir('asc')
+    }
   }
 
-  if (status === 'error') {
-    return (
-      <p data-testid="error-state" role="alert">
-        Could not load reviews. Please try again.
-      </p>
-    )
+  function retry() {
+    load()
+  }
+
+  if (status === 'loading') {
+    return <p data-testid="loading-state">Loading reviews…</p>
   }
 
   return (
     <main>
       <h1>Nicelydone Review Dashboard</h1>
 
-      <SummaryCards reviews={filtered} />
+      {errorMessage && (
+        <p data-testid="error-state" role="alert">
+          Could not load reviews: {errorMessage}
+          <button data-testid="retry-button" onClick={retry}>
+            Retry
+          </button>
+        </p>
+      )}
 
-      <div className="filters" style={{display: 'flex', gap: '1rem', margin: '1rem 0'}}>
-        <label>
-          Repository{' '}
-          <select
-            data-testid="repository-filter"
-            value={repositoryFilter}
-            onChange={(e) => setRepositoryFilter(e.target.value)}
-          >
-            <option value="all">All</option>
-            {repositories.map((repo) => (
-              <option key={repo} value={repo}>
-                {repo}
-              </option>
-            ))}
-          </select>
-        </label>
+      {status === 'ready' && (
+        <>
+          <SummaryCards reviews={displayed} />
 
-        <label>
-          Rating{' '}
-          <select
-            data-testid="rating-filter"
-            value={ratingFilter}
-            onChange={(e) => setRatingFilter(e.target.value)}
-          >
-            <option value="all">All</option>
-            {[5, 4, 3, 2, 1].map((n) => (
-              <option key={n} value={String(n)}>
-                {n}
-              </option>
-            ))}
-          </select>
-        </label>
-      </div>
+          <div className="filters" style={{display: 'flex', gap: '1rem', margin: '1rem 0'}}>
+            <label>
+              Repository{' '}
+              <select
+                data-testid="repository-filter"
+                value={repositoryFilter}
+                onChange={(e) => setRepositoryFilter(e.target.value)}
+              >
+                <option value="all">All</option>
+                {repositories.map((repo) => (
+                  <option key={repo} value={repo}>
+                    {repo}
+                  </option>
+                ))}
+              </select>
+            </label>
 
-      <ReviewTable reviews={filtered} />
+            <label>
+              Rating{' '}
+              <select
+                data-testid="rating-filter"
+                value={ratingFilter}
+                onChange={(e) => setRatingFilter(e.target.value)}
+              >
+                <option value="all">All</option>
+                {[5, 4, 3, 2, 1].map((n) => (
+                  <option key={n} value={String(n)}>
+                    {n}
+                  </option>
+                ))}
+              </select>
+            </label>
+          </div>
+
+          <ReviewTable
+            reviews={displayed}
+            sortKey={sortKey}
+            sortDir={sortDir}
+            onSort={handleSort}
+          />
+        </>
+      )}
     </main>
   )
 }
