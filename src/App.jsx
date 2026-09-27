@@ -13,6 +13,8 @@ export default function App() {
   const [sortDir, setSortDir] = useState('asc')
 
   function load() {
+    // Clear any previous error before starting a new request (incl. retry).
+    setErrorMessage(null)
     setStatus('loading')
     fetchReviews()
       .then((data) => {
@@ -56,7 +58,7 @@ export default function App() {
       return 0
     })
     return copy
-  }, [sortKey, sortDir])
+  }, [filtered, sortKey, sortDir])
 
   const displayed = sortKey ? sorted : filtered
 
