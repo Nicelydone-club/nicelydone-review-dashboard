@@ -1,5 +1,5 @@
-import {describe, it, expect} from 'vitest'
-import {render, screen} from '@testing-library/react'
+import {describe, it, expect, vi} from 'vitest'
+import {render, screen, fireEvent} from '@testing-library/react'
 import ReviewTable from './ReviewTable.jsx'
 
 const reviews = [
@@ -9,7 +9,7 @@ const reviews = [
 
 describe('ReviewTable', () => {
   it('renders a row per review', () => {
-    render(<ReviewTable reviews={reviews} />)
+    render(<ReviewTable reviews={reviews} onSort={() => {}} />)
     expect(screen.getAllByTestId('review-row')).toHaveLength(2)
     expect(screen.getByText('Checkout validation')).toBeInTheDocument()
   })
@@ -17,5 +17,12 @@ describe('ReviewTable', () => {
   it('shows an empty state when there are no reviews', () => {
     render(<ReviewTable reviews={[]} />)
     expect(screen.getByTestId('empty-state')).toBeInTheDocument()
+  })
+
+  it('calls onSort when a column header is clicked', () => {
+    const onSort = vi.fn()
+    render(<ReviewTable reviews={reviews} onSort={onSort} />)
+    fireEvent.click(screen.getByTestId('col-rating'))
+    expect(onSort).toHaveBeenCalledWith('rating')
   })
 })

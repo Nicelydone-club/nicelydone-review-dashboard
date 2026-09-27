@@ -1,4 +1,12 @@
-export default function ReviewTable({reviews}) {
+const COLUMNS = [
+  {key: 'id', label: 'ID'},
+  {key: 'title', label: 'Title'},
+  {key: 'repository', label: 'Repository'},
+  {key: 'author', label: 'Author'},
+  {key: 'rating', label: 'Rating'},
+]
+
+export default function ReviewTable({reviews, sortKey, sortDir, onSort}) {
   if (reviews.length === 0) {
     return (
       <p data-testid="empty-state" className="empty-state">
@@ -11,11 +19,17 @@ export default function ReviewTable({reviews}) {
     <table data-testid="review-table">
       <thead>
         <tr>
-          <th>ID</th>
-          <th>Title</th>
-          <th>Repository</th>
-          <th>Author</th>
-          <th>Rating</th>
+          {COLUMNS.map((col) => (
+            <th
+              key={col.key}
+              data-testid={`col-${col.key}`}
+              onClick={() => onSort?.(col.key)}
+              style={{cursor: 'pointer'}}
+            >
+              {col.label}
+              {sortKey === col.key ? (sortDir === 'asc' ? ' ▲' : ' ▼') : ''}
+            </th>
+          ))}
         </tr>
       </thead>
       <tbody>
